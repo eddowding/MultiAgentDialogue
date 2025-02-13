@@ -14,6 +14,7 @@ interface ConversationResponse {
     currentSpeakerId: number | null;
     maxTurns: number;
     currentTurn: number;
+    systemPrompt: string;
   } | null;
   messages: Message[];
   personas: Persona[];
@@ -57,7 +58,7 @@ export function ConversationDisplay() {
   const { data, isLoading } = useQuery<ConversationResponse>({
     queryKey: ["/api/conversations/current"],
     enabled: true,
-    refetchInterval: (data) => 
+    refetchInterval: (data) =>
       data?.conversation?.status === "active" ? 2000 : false,
   });
 
@@ -66,14 +67,6 @@ export function ConversationDisplay() {
       scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [data?.messages]);
-
-  const handleExport = () => {
-    if (data?.messages && data.personas) {
-      const markdown = convertToMarkdown(data.messages, data.personas);
-      const filename = `conversation-export-${new Date().toISOString().split('T')[0]}.md`;
-      downloadMarkdown(markdown, filename);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -89,20 +82,32 @@ export function ConversationDisplay() {
     );
   }
 
-  if (!data?.messages?.length) {
+  if (!data?.personas || data.personas.length < 2) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center text-muted-foreground">
-            No conversation in progress. Create personas and start a new conversation.
+            Create at least two personas before starting a conversation.
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const isConversationActive = data.conversation?.status === "active";
-  const currentSpeaker = data.personas.find(p => p.id === data.conversation?.currentSpeakerId);
+  if (!data.conversation) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            No active conversation. Use the controls above to start a new conversation.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isConversationActive = data.conversation.status === "active";
+  const currentSpeaker = data.personas.find(p => p.id === data.conversation.currentSpeakerId);
 
   return (
     <Card>
@@ -110,11 +115,11 @@ export function ConversationDisplay() {
         <div className="flex justify-between items-center">
           <div className="space-y-1">
             <CardTitle className="text-xl">
-              Conversation Progress: Turn {data.conversation?.currentTurn} of {data.conversation?.maxTurns}
+              Conversation Progress: Turn {data.conversation.currentTurn} of {data.conversation.maxTurns}
             </CardTitle>
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
-                Status: {data.conversation?.status}
+                Status: {data.conversation.status}
               </p>
               {isConversationActive && currentSpeaker && (
                 <p className="text-sm">
@@ -123,15 +128,23 @@ export function ConversationDisplay() {
               )}
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleExport}
-          >
-            <Download className="h-4 w-4" />
-            Export as Markdown
-          </Button>
+          {data.messages.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                if (data.messages && data.personas) {
+                  const markdown = convertToMarkdown(data.messages, data.personas);
+                  const filename = `conversation-export-${new Date().toISOString().split('T')[0]}.md`;
+                  downloadMarkdown(markdown, filename);
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Export as Markdown
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-6 pt-0">

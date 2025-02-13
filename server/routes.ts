@@ -35,26 +35,32 @@ export function registerRoutes(app: Express): Server {
 
   // Conversation routes with improved turn handling
   app.get("/api/conversations/current", async (req, res) => {
-    const conversations = await Promise.all(
-      Array.from({ length: 10 }, (_, i) => storage.getConversation(i + 1))
-    );
+    try {
+      const conversations = await storage.listConversations();
+      if (!conversations || conversations.length === 0) {
+        return res.json({ conversation: null, messages: [], personas: [] });
+      }
 
-    const activeConversation = conversations
-      .filter((c): c is NonNullable<typeof c> => c !== undefined)
-      .find(c => c.status === "active");
+      // Find the most recent active conversation.  Simulating database-like ordering.
+      const activeConversation = conversations.reduce((a, b) => (b.status === "active" && b.id > a.id) ? b : a, conversations[0]);
 
-    if (!activeConversation) {
-      return res.json({ conversation: null, messages: [], personas: [] });
+
+      if (!activeConversation || activeConversation.status !== "active") {
+        return res.json({ conversation: null, messages: [], personas: conversations });
+      }
+
+      const messages = await storage.getMessagesByConversation(activeConversation.id);
+      const personas = await storage.listPersonas();
+
+      res.json({
+        conversation: activeConversation,
+        messages,
+        personas,
+      });
+    } catch (error) {
+      console.error("Error fetching current conversation:", error);
+      res.status(500).json({ error: "Failed to fetch current conversation" });
     }
-
-    const messages = await storage.getMessagesByConversation(activeConversation.id);
-    const personas = await storage.listPersonas();
-
-    res.json({
-      conversation: activeConversation,
-      messages,
-      personas,
-    });
   });
 
   app.post("/api/conversations", async (req, res) => {
@@ -91,8 +97,8 @@ export function registerRoutes(app: Express): Server {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.personaId === currentPersona.id) {
-        return res.status(400).json({ 
-          error: "Invalid turn order: waiting for response from other participant" 
+        return res.status(400).json({
+          error: "Invalid turn order: waiting for response from other participant"
         });
       }
     }
