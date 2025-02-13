@@ -21,13 +21,17 @@ export default function Home() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-[350px_1fr]">
-          <div className="space-y-6">
+          {/* Left column - Persona Form */}
+          <div>
             <Card>
               <CardContent className="pt-6">
                 <PersonaForm />
               </CardContent>
             </Card>
-            
+          </div>
+
+          {/* Right column - Controls and Conversation */}
+          <div className="space-y-6">
             {personas && personas.length > 1 && (
               <Card>
                 <CardContent className="pt-6">
@@ -35,9 +39,7 @@ export default function Home() {
                 </CardContent>
               </Card>
             )}
-          </div>
 
-          <div>
             <ConversationDisplay />
           </div>
         </div>
