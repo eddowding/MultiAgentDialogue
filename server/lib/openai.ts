@@ -7,14 +7,17 @@ const openai = new OpenAI();
 export async function generateResponse(
   currentPersona: Persona,
   conversationHistory: Message[],
-  otherPersonas: Persona[]
+  otherPersonas: Persona[],
+  systemPrompt: string
 ): Promise<string> {
-  const systemPrompt = `You are ${currentPersona.name}. 
+  const personalizedPrompt = `You are ${currentPersona.name}. 
 Background: ${currentPersona.background}
 Your goal: ${currentPersona.goal}
 
 You are in a conversation with:
 ${otherPersonas.map((p) => `- ${p.name}: ${p.background}`).join("\n")}
+
+${systemPrompt}
 
 Maintain your character's perspective and work towards your goal while engaging constructively with others.
 Keep responses concise (2-3 sentences).
@@ -28,7 +31,7 @@ Keep responses concise (2-3 sentences).
     const response = await openai.chat.completions.create({
       model: currentPersona.modelType,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: personalizedPrompt },
         { role: "user", content: `Conversation history:\n${conversationContext}\n\nRespond as ${currentPersona.name}:` }
       ],
       max_tokens: 150,

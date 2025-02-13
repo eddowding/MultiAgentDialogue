@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,13 +24,21 @@ interface CurrentConversation {
   currentSpeakerId: number | null;
   maxTurns: number;
   currentTurn: number;
+  systemPrompt: string;
 }
+
+const DEFAULT_SYSTEM_PROMPT = "You are participating in a structured negotiation aimed at reaching a point of reconciliation. " +
+  "This does not necessarily mean agreement; rather, the goal is to explore viable paths forward. " +
+  "Prioritise addressing the most crucial issues first, identifying any points of alignment, and clarifying key differences. " +
+  "After establishing the core concerns, explore possible alternative solutions. " +
+  "If reconciliation is impossible, provide clear, practical next-step recommendations that allow both parties to move forward productively.";
 
 export function ConversationControls({ personas }: ConversationControlsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firstSpeakerId, setFirstSpeakerId] = useState<string>("");
   const [maxTurns, setMaxTurns] = useState("10");
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [isRunningMultipleTurns, setIsRunningMultipleTurns] = useState(false);
 
   const startMutation = useMutation({
@@ -37,6 +46,7 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
       await apiRequest("POST", "/api/conversations", {
         currentSpeakerId: parseInt(firstSpeakerId),
         maxTurns: parseInt(maxTurns),
+        systemPrompt,
       });
     },
     onSuccess: () => {
@@ -149,6 +159,16 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
           onChange={(e) => setMaxTurns(e.target.value)}
           min="1"
           max="50"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">System Prompt</label>
+        <Textarea
+          value={systemPrompt}
+          onChange={(e) => setSystemPrompt(e.target.value)}
+          className="min-h-[100px]"
+          placeholder="Enter system prompt..."
         />
       </div>
 

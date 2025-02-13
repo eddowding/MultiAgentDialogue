@@ -24,6 +24,13 @@ export const conversations = pgTable("conversations", {
   currentSpeakerId: integer("current_speaker_id"),
   maxTurns: integer("max_turns").notNull().default(10),
   currentTurn: integer("current_turn").notNull().default(0),
+  systemPrompt: text("system_prompt").notNull().default(
+    "You are participating in a structured negotiation aimed at reaching a point of reconciliation. " +
+    "This does not necessarily mean agreement; rather, the goal is to explore viable paths forward. " +
+    "Prioritise addressing the most crucial issues first, identifying any points of alignment, and clarifying key differences. " +
+    "After establishing the core concerns, explore possible alternative solutions. " +
+    "If reconciliation is impossible, provide clear, practical next-step recommendations that allow both parties to move forward productively."
+  ),
 });
 
 export const insertPersonaSchema = createInsertSchema(personas).pick({
@@ -42,6 +49,9 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 export const insertConversationSchema = createInsertSchema(conversations).pick({
   maxTurns: true,
   currentSpeakerId: true,
+  systemPrompt: true,
+}).extend({
+  systemPrompt: z.string().optional(),
 });
 
 export type Persona = typeof personas.$inferSelect;

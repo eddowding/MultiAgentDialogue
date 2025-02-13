@@ -97,7 +97,13 @@ export function registerRoutes(app: Express): Server {
     const otherPersonas = personas.filter(p => p.id !== currentPersona.id);
 
     try {
-      const content = await generateResponse(currentPersona, messages, otherPersonas);
+      const content = await generateResponse(
+        currentPersona,
+        messages,
+        otherPersonas,
+        conversation.systemPrompt
+      );
+
       const message = await storage.createMessage({
         conversationId,
         personaId: currentPersona.id,
