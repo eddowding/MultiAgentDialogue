@@ -106,13 +106,9 @@ export function registerRoutes(app: Express): Server {
 
       await storage.incrementTurn(conversationId);
 
-      if (conversation.currentTurn + 1 >= conversation.maxTurns) {
-        await storage.updateConversationStatus(conversationId, "completed");
-      } else {
-        // Select next speaker (simple round-robin)
-        const nextPersonaId = otherPersonas[0].id;
-        await storage.updateCurrentSpeaker(conversationId, nextPersonaId);
-      }
+      // Select next speaker (simple round-robin)
+      const nextPersonaId = otherPersonas[0].id;
+      await storage.updateCurrentSpeaker(conversationId, nextPersonaId);
 
       res.json(message);
     } catch (error) {
