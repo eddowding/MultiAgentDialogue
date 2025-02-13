@@ -93,6 +93,11 @@ export function registerRoutes(app: Express): Server {
       return res.status(404).json({ error: "Current speaker not found" });
     }
 
+    // Check if the last message was from the same speaker
+    if (messages.length > 0 && messages[messages.length - 1].personaId === currentPersona.id) {
+      return res.status(400).json({ error: "Cannot have consecutive messages from the same speaker" });
+    }
+
     const personas = await storage.listPersonas();
     const otherPersonas = personas.filter(p => p.id !== currentPersona.id);
 
@@ -116,8 +121,14 @@ export function registerRoutes(app: Express): Server {
       const nextPersonaId = otherPersonas[0].id;
       await storage.updateCurrentSpeaker(conversationId, nextPersonaId);
 
+      // Check if we've reached the maximum turns
+      if (conversation.currentTurn + 1 >= conversation.maxTurns) {
+        await storage.updateConversationStatus(conversationId, "completed");
+      }
+
       res.json(message);
     } catch (error) {
+      console.error("Error generating response:", error);
       res.status(500).json({ error: "Failed to generate response" });
     }
   });

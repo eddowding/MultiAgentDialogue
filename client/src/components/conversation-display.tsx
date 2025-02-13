@@ -57,7 +57,8 @@ export function ConversationDisplay() {
   const { data, isLoading } = useQuery<ConversationResponse>({
     queryKey: ["/api/conversations/current"],
     enabled: true,
-    refetchInterval: 2000,
+    refetchInterval: (data) => 
+      data?.conversation?.status === "active" ? 2000 : false,
   });
 
   useEffect(() => {
@@ -100,17 +101,27 @@ export function ConversationDisplay() {
     );
   }
 
+  const isConversationActive = data.conversation?.status === "active";
+  const currentSpeaker = data.personas.find(p => p.id === data.conversation?.currentSpeakerId);
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <div>
+          <div className="space-y-1">
             <CardTitle className="text-xl">
               Conversation Progress: Turn {data.conversation?.currentTurn} of {data.conversation?.maxTurns}
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Status: {data.conversation?.status}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Status: {data.conversation?.status}
+              </p>
+              {isConversationActive && currentSpeaker && (
+                <p className="text-sm">
+                  • Current Speaker: <span className="text-primary font-medium">{currentSpeaker.name}</span>
+                </p>
+              )}
+            </div>
           </div>
           <Button
             variant="outline"
@@ -126,12 +137,14 @@ export function ConversationDisplay() {
       <CardContent className="p-6 pt-0">
         <ScrollArea className="h-[600px] pr-4">
           <div className="space-y-4">
-            {data.messages.map((message) => {
+            {data.messages.map((message, index) => {
               const persona = data.personas.find((p) => p.id === message.personaId);
+              const isLastMessage = index === data.messages.length - 1;
+
               return (
                 <div
                   key={message.id}
-                  className="flex flex-col space-y-2"
+                  className={`flex flex-col space-y-2 ${isLastMessage ? "animate-in fade-in-50" : ""}`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-primary">
