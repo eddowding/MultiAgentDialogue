@@ -1,0 +1,101 @@
+Multi-Agent AI Conversation App - Build Specification
+
+Overview
+
+This application allows users to configure and host multi-agent AI conversations where synthetic personas negotiate a mutually acceptable outcome. Users can define each AI participant's background and goals, then let them converse in sequence while maintaining context. The system supports multiple AI providers (OpenAI, Gemini, Anthropic, etc.).
+
+Core Features
+
+1. AI API Integration
+
+Support for multiple AI models:
+
+OpenAI (GPT-4)
+
+Google Gemini
+
+Anthropic Claude
+
+Custom API options
+
+Users provide API keys via a secure configuration page.
+
+Models can be selected per agent.
+
+2. Synthetic Persona Configuration
+
+Each AI persona has:
+
+Name
+
+Background Information (context about their role, history, biases)
+
+Desired Outcome (goal they seek in negotiation)
+
+Assigned AI Model (e.g., GPT-4, Gemini, Claude)
+
+Input fields for defining each persona.
+
+3. Conversation Management
+
+User selects the first speaker.
+
+AI personas take turns speaking sequentially.
+
+Full conversation history is passed to each new response to maintain context.
+
+System stops when:
+
+A predefined number of turns is reached.
+
+The user manually stops the discussion.
+
+A clear agreement is detected (optional NLP analysis).
+
+4. Real-Time Conversation Display
+
+Output format mimics a dialogue:
+
+[Alice]: I propose a 10% discount for bulk purchases.
+[Bob]: That seems reasonable, but I’d like to explore payment flexibility.
+
+Full conversation history shown in an interactive interface.
+
+Users can export the conversation as a text file or JSON.
+
+5. User Controls & Customization
+
+Adjust AI verbosity and response time.
+
+Option to manually edit AI messages before sending.
+
+Dynamic UI for adding/removing personas.
+
+Conversation logging and replay functionality.
+
+API Workflow
+
+User Configuration:
+
+User enters API keys and defines AI personas.
+
+Selects a starting speaker.
+
+Conversation Execution:
+
+AI personas take turns responding.
+
+The full thread is fed into each next turn.
+
+Termination & Synthesis:
+
+Stops after a defined number of turns or when a consensus is reached.
+
+Users can export the conversation or continue refining it manually.
+
+Output Display & Storage:
+
+The conversation is formatted as a dialogue.
+
+Option to save/export in multiple formats.
+
