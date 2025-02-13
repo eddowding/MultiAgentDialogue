@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import type { Persona } from "@shared/schema";
+import { Trash2 } from "lucide-react";
 
 interface ConversationControlsProps {
   personas: Persona[];
@@ -131,9 +132,41 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
     }
   };
 
+  const clearChatMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", "/api/conversations", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations/current"] });
+      toast({
+        title: "Success",
+        description: "Chat history cleared",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to clear chat history",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">Conversation Controls</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold">Conversation Controls</h3>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => clearChatMutation.mutate()}
+          disabled={clearChatMutation.isPending}
+          className="gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear Chat
+        </Button>
+      </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">First Speaker</label>

@@ -122,6 +122,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/personas", async (req, res) => {
+    await storage.clearPersonas();
+    res.json({ success: true });
+  });
+
+  app.delete("/api/conversations", async (req, res) => {
+    await storage.clearConversations();
+    res.json({ success: true });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

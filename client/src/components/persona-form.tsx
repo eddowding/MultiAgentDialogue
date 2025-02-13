@@ -28,7 +28,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { UserCircle, Pencil } from "lucide-react";
+import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export function PersonaForm() {
@@ -74,6 +74,28 @@ export function PersonaForm() {
     },
   });
 
+  const clearPersonasMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", "/api/personas", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/personas"] });
+      form.reset();
+      setEditingPersona(null);
+      toast({
+        title: "Success",
+        description: "All personas cleared",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to clear personas",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEdit = (persona: Persona) => {
     setEditingPersona(persona);
     form.reset({
@@ -93,7 +115,19 @@ export function PersonaForm() {
     <div className="space-y-6">
       {personas && personas.length > 0 && (
         <div className="space-y-2">
-          <h3 className="font-semibold">Existing Personas</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold">Existing Personas</h3>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => clearPersonasMutation.mutate()}
+              disabled={clearPersonasMutation.isPending}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear All Personas
+            </Button>
+          </div>
           <Accordion type="single" collapsible className="w-full">
             {personas.map((persona) => (
               <AccordionItem key={persona.id} value={`persona-${persona.id}`}>

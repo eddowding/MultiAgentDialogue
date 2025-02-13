@@ -10,6 +10,7 @@ export interface IStorage {
   createPersona(persona: InsertPersona): Promise<Persona>;
   updatePersona(id: number, persona: InsertPersona): Promise<Persona | undefined>;
   deletePersona(id: number): Promise<void>;
+  clearPersonas(): Promise<void>; // Added
 
   // Message operations
   createMessage(message: InsertMessage): Promise<Message>;
@@ -21,6 +22,7 @@ export interface IStorage {
   updateConversationStatus(id: number, status: string): Promise<void>;
   updateCurrentSpeaker(id: number, speakerId: number): Promise<void>;
   incrementTurn(id: number): Promise<void>;
+  clearConversations(): Promise<void>; // Added
 }
 
 export class DatabaseStorage implements IStorage {
@@ -93,6 +95,15 @@ export class DatabaseStorage implements IStorage {
         .set({ currentTurn: conversation.currentTurn + 1 })
         .where(eq(conversations.id, id));
     }
+  }
+
+  async clearPersonas(): Promise<void> { // Added
+    await db.delete(personas);
+  }
+
+  async clearConversations(): Promise<void> { // Added
+    await db.delete(messages);
+    await db.delete(conversations);
   }
 }
 
