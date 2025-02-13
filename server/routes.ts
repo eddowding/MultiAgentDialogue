@@ -70,17 +70,26 @@ export function registerRoutes(app: Express): Server {
     const conversationId = parseInt(req.params.id);
     const conversation = await storage.getConversation(conversationId);
     if (!conversation) {
-      return res.status(404).json({ error: "Conversation not found" });
+      return res.status(404).json({ 
+        error: "Conversation not found",
+        details: `No active conversation found with ID ${conversationId}`
+      });
     }
 
     if (conversation.status !== "active") {
-      return res.status(400).json({ error: "Conversation is not active" });
+      return res.status(400).json({ 
+        error: "Conversation is not active",
+        details: `Conversation ${conversationId} has status: ${conversation.status}`
+      });
     }
 
     // Get current speaker
     const currentPersona = await storage.getPersona(conversation.currentSpeakerId!);
     if (!currentPersona) {
-      return res.status(404).json({ error: "Current speaker not found" });
+      return res.status(404).json({ 
+        error: "Current speaker not found",
+        details: `No persona found with ID ${conversation.currentSpeakerId}`
+      });
     }
 
     const messages = await storage.getMessagesByConversation(conversationId);
@@ -92,7 +101,8 @@ export function registerRoutes(app: Express): Server {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.personaId === currentPersona.id) {
         return res.status(400).json({ 
-          error: "Invalid turn order: waiting for response from other participant" 
+          error: "Invalid turn order",
+          details: `Waiting for response from other participants. Last message was from ${currentPersona.name}`
         });
       }
     }
@@ -123,9 +133,12 @@ export function registerRoutes(app: Express): Server {
       }
 
       res.json(message);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating response:", error);
-      res.status(500).json({ error: "Failed to generate response" });
+      res.status(500).json({ 
+        error: "Failed to generate response",
+        details: error.message || "An unexpected error occurred while generating the AI response"
+      });
     }
   });
 
