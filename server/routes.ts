@@ -33,9 +33,8 @@ export function registerRoutes(app: Express): Server {
     res.json(persona);
   });
 
-  // Conversation routes
+  // Conversation routes with improved turn handling
   app.get("/api/conversations/current", async (req, res) => {
-    // Get all conversations and find the most recent active one
     const conversations = await Promise.all(
       Array.from({ length: 10 }, (_, i) => storage.getConversation(i + 1))
     );
@@ -67,15 +66,6 @@ export function registerRoutes(app: Express): Server {
     res.json(conversation);
   });
 
-  app.get("/api/conversations/:id", async (req, res) => {
-    const conversation = await storage.getConversation(parseInt(req.params.id));
-    if (!conversation) {
-      return res.status(404).json({ error: "Conversation not found" });
-    }
-    const messages = await storage.getMessagesByConversation(conversation.id);
-    res.json({ conversation, messages });
-  });
-
   app.post("/api/conversations/:id/next", async (req, res) => {
     const conversationId = parseInt(req.params.id);
     const conversation = await storage.getConversation(conversationId);
@@ -87,19 +77,25 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ error: "Conversation is not active" });
     }
 
-    const messages = await storage.getMessagesByConversation(conversationId);
+    // Get current speaker
     const currentPersona = await storage.getPersona(conversation.currentSpeakerId!);
     if (!currentPersona) {
       return res.status(404).json({ error: "Current speaker not found" });
     }
 
-    // Check if the last message was from the same speaker
-    if (messages.length > 0 && messages[messages.length - 1].personaId === currentPersona.id) {
-      return res.status(400).json({ error: "Cannot have consecutive messages from the same speaker" });
-    }
-
+    const messages = await storage.getMessagesByConversation(conversationId);
     const personas = await storage.listPersonas();
     const otherPersonas = personas.filter(p => p.id !== currentPersona.id);
+
+    // Enforce turn order: verify last speaker wasn't current speaker
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.personaId === currentPersona.id) {
+        return res.status(400).json({ 
+          error: "Invalid turn order: waiting for response from other participant" 
+        });
+      }
+    }
 
     try {
       const content = await generateResponse(
@@ -117,11 +113,11 @@ export function registerRoutes(app: Express): Server {
 
       await storage.incrementTurn(conversationId);
 
-      // Select next speaker (simple round-robin)
+      // Select next speaker (round-robin between participants)
       const nextPersonaId = otherPersonas[0].id;
       await storage.updateCurrentSpeaker(conversationId, nextPersonaId);
 
-      // Check if we've reached the maximum turns
+      // Check if conversation should end
       if (conversation.currentTurn + 1 >= conversation.maxTurns) {
         await storage.updateConversationStatus(conversationId, "completed");
       }
@@ -131,6 +127,15 @@ export function registerRoutes(app: Express): Server {
       console.error("Error generating response:", error);
       res.status(500).json({ error: "Failed to generate response" });
     }
+  });
+
+  app.get("/api/conversations/:id", async (req, res) => {
+    const conversation = await storage.getConversation(parseInt(req.params.id));
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    const messages = await storage.getMessagesByConversation(conversation.id);
+    res.json({ conversation, messages });
   });
 
   app.delete("/api/personas", async (req, res) => {
