@@ -36,21 +36,24 @@ export function registerRoutes(app: Express): Server {
   // Conversation routes with improved turn handling
   app.get("/api/conversations/current", async (req, res) => {
     try {
+      const personas = await storage.listPersonas();
       const conversations = await storage.listConversations();
+
+      // If there are no conversations yet, just return the personas
       if (!conversations || conversations.length === 0) {
-        return res.json({ conversation: null, messages: [], personas: [] });
+        return res.json({ conversation: null, messages: [], personas });
       }
 
-      // Find the most recent active conversation.  Simulating database-like ordering.
-      const activeConversation = conversations.reduce((a, b) => (b.status === "active" && b.id > a.id) ? b : a, conversations[0]);
+      // Find the most recent active conversation
+      const activeConversation = conversations
+        .filter(c => c.status === "active")
+        .sort((a, b) => b.id - a.id)[0];
 
-
-      if (!activeConversation || activeConversation.status !== "active") {
-        return res.json({ conversation: null, messages: [], personas: conversations });
+      if (!activeConversation) {
+        return res.json({ conversation: null, messages: [], personas });
       }
 
       const messages = await storage.getMessagesByConversation(activeConversation.id);
-      const personas = await storage.listPersonas();
 
       res.json({
         conversation: activeConversation,
@@ -92,16 +95,6 @@ export function registerRoutes(app: Express): Server {
     const messages = await storage.getMessagesByConversation(conversationId);
     const personas = await storage.listPersonas();
     const otherPersonas = personas.filter(p => p.id !== currentPersona.id);
-
-    // Enforce turn order: verify last speaker wasn't current speaker
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.personaId === currentPersona.id) {
-        return res.status(400).json({
-          error: "Invalid turn order: waiting for response from other participant"
-        });
-      }
-    }
 
     try {
       const content = await generateResponse(

@@ -10,7 +10,7 @@ export interface IStorage {
   createPersona(persona: InsertPersona): Promise<Persona>;
   updatePersona(id: number, persona: InsertPersona): Promise<Persona | undefined>;
   deletePersona(id: number): Promise<void>;
-  clearPersonas(): Promise<void>; // Added
+  clearPersonas(): Promise<void>;
 
   // Message operations
   createMessage(message: InsertMessage): Promise<Message>;
@@ -19,10 +19,11 @@ export interface IStorage {
   // Conversation operations
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   getConversation(id: number): Promise<Conversation | undefined>;
+  listConversations(): Promise<Conversation[]>;
   updateConversationStatus(id: number, status: string): Promise<void>;
   updateCurrentSpeaker(id: number, speakerId: number): Promise<void>;
   incrementTurn(id: number): Promise<void>;
-  clearConversations(): Promise<void>; // Added
+  clearConversations(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -76,6 +77,10 @@ export class DatabaseStorage implements IStorage {
     return conversation;
   }
 
+  async listConversations(): Promise<Conversation[]> {
+    return await db.select().from(conversations);
+  }
+
   async updateConversationStatus(id: number, status: string): Promise<void> {
     await db.update(conversations)
       .set({ status })
@@ -97,11 +102,11 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async clearPersonas(): Promise<void> { // Added
+  async clearPersonas(): Promise<void> {
     await db.delete(personas);
   }
 
-  async clearConversations(): Promise<void> { // Added
+  async clearConversations(): Promise<void> {
     await db.delete(messages);
     await db.delete(conversations);
   }
