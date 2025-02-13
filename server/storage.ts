@@ -1,4 +1,7 @@
-import { Persona, InsertPersona, Message, InsertMessage, Conversation, InsertConversation } from "@shared/schema";
+import { personas, messages, conversations } from "@shared/schema";
+import { type Persona, type InsertPersona, type Message, type InsertMessage, type Conversation, type InsertConversation } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Persona operations
@@ -19,104 +22,68 @@ export interface IStorage {
   incrementTurn(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private personas: Map<number, Persona>;
-  private messages: Map<number, Message>;
-  private conversations: Map<number, Conversation>;
-  private currentId: { [key: string]: number };
-
-  constructor() {
-    this.personas = new Map();
-    this.messages = new Map();
-    this.conversations = new Map();
-    this.currentId = {
-      persona: 1,
-      message: 1,
-      conversation: 1,
-    };
-  }
-
+export class DatabaseStorage implements IStorage {
   async getPersona(id: number): Promise<Persona | undefined> {
-    return this.personas.get(id);
+    const [persona] = await db.select().from(personas).where(eq(personas.id, id));
+    return persona;
   }
 
   async listPersonas(): Promise<Persona[]> {
-    return Array.from(this.personas.values());
+    return await db.select().from(personas);
   }
 
   async createPersona(persona: InsertPersona): Promise<Persona> {
-    const id = this.currentId.persona++;
-    const newPersona: Persona = {
-      ...persona,
-      id,
-      modelType: persona.modelType || "gpt-4o",
-    };
-    this.personas.set(id, newPersona);
+    const [newPersona] = await db.insert(personas).values(persona).returning();
     return newPersona;
   }
 
   async deletePersona(id: number): Promise<void> {
-    this.personas.delete(id);
+    await db.delete(personas).where(eq(personas.id, id));
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const id = this.currentId.message++;
-    const newMessage: Message = {
-      ...message,
-      id,
-      timestamp: new Date(),
-    };
-    this.messages.set(id, newMessage);
+    const [newMessage] = await db.insert(messages).values(message).returning();
     return newMessage;
   }
 
   async getMessagesByConversation(conversationId: number): Promise<Message[]> {
-    return Array.from(this.messages.values()).filter(
-      (m) => m.conversationId === conversationId
-    );
+    return await db.select().from(messages).where(eq(messages.conversationId, conversationId));
   }
 
   async createConversation(conversation: InsertConversation): Promise<Conversation> {
-    const id = this.currentId.conversation++;
-    const newConversation: Conversation = {
+    const [newConversation] = await db.insert(conversations).values({
       ...conversation,
-      id,
       status: "active",
       currentTurn: 0,
-      maxTurns: conversation.maxTurns || 10,
-      currentSpeakerId: conversation.currentSpeakerId || null,
-    };
-    this.conversations.set(id, newConversation);
+    }).returning();
     return newConversation;
   }
 
   async getConversation(id: number): Promise<Conversation | undefined> {
-    return this.conversations.get(id);
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation;
   }
 
   async updateConversationStatus(id: number, status: string): Promise<void> {
-    const conversation = this.conversations.get(id);
-    if (conversation) {
-      this.conversations.set(id, { ...conversation, status });
-    }
+    await db.update(conversations)
+      .set({ status })
+      .where(eq(conversations.id, id));
   }
 
   async updateCurrentSpeaker(id: number, speakerId: number): Promise<void> {
-    const conversation = this.conversations.get(id);
-    if (conversation) {
-      this.conversations.set(id, { ...conversation, currentSpeakerId: speakerId });
-    }
+    await db.update(conversations)
+      .set({ currentSpeakerId: speakerId })
+      .where(eq(conversations.id, id));
   }
 
   async incrementTurn(id: number): Promise<void> {
-    const conversation = this.conversations.get(id);
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (conversation) {
-      this.conversations.set(id, {
-        ...conversation,
-        currentTurn: conversation.currentTurn + 1,
-      });
+      await db.update(conversations)
+        .set({ currentTurn: conversation.currentTurn + 1 })
+        .where(eq(conversations.id, id));
     }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
