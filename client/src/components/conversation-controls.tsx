@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,8 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type { Persona } from "@shared/schema";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronDown } from "lucide-react";
 
 interface ConversationControlsProps {
   personas: Persona[];
@@ -38,9 +44,10 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firstSpeakerId, setFirstSpeakerId] = useState<string>("");
-  const [maxTurns, setMaxTurns] = useState("10");
+  const [maxTurns, setMaxTurns] = useState("100");
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [isRunningMultipleTurns, setIsRunningMultipleTurns] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const startMutation = useMutation({
     mutationFn: async () => {
@@ -104,7 +111,6 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
           break;
         }
 
-        // Add a small delay between turns to prevent rate limiting
         if (i > 0) {
           await delay(1000);
         }
@@ -121,7 +127,6 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
           break;
         }
 
-        // Verify the conversation is still active after the turn
         const updatedData = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
         if (updatedData?.conversation?.status !== "active") {
           break;
@@ -168,68 +173,76 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">First Speaker</label>
-        <Select onValueChange={setFirstSpeakerId} value={firstSpeakerId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select first speaker" />
-          </SelectTrigger>
-          <SelectContent>
-            {personas.map((persona) => (
-              <SelectItem key={persona.id} value={persona.id.toString()}>
-                {persona.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="text-sm font-medium">First Speaker</label>
+          <Select onValueChange={setFirstSpeakerId} value={firstSpeakerId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select first speaker" />
+            </SelectTrigger>
+            <SelectContent>
+              {personas.map((persona) => (
+                <SelectItem key={persona.id} value={persona.id.toString()}>
+                  {persona.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1">
+          <label className="text-sm font-medium">Max Turns</label>
+          <Input
+            type="number"
+            value={maxTurns}
+            onChange={(e) => setMaxTurns(e.target.value)}
+            min="1"
+            max="100"
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Max Turns</label>
-        <Input
-          type="number"
-          value={maxTurns}
-          onChange={(e) => setMaxTurns(e.target.value)}
-          min="1"
-          max="50"
-        />
-      </div>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="flex w-full justify-between">
+            System Prompt <ChevronDown className={`h-4 w-4 transform ${isOpen ? 'rotate-180' : ''} transition-transform`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Textarea
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            className="min-h-[100px] mt-2"
+            placeholder="Enter system prompt..."
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">System Prompt</label>
-        <Textarea
-          value={systemPrompt}
-          onChange={(e) => setSystemPrompt(e.target.value)}
-          className="min-h-[100px]"
-          placeholder="Enter system prompt..."
-        />
-      </div>
-
-      <div className="space-y-2">
+      <div className="flex gap-2">
         <Button
-          className="w-full"
           onClick={() => startMutation.mutate()}
           disabled={!firstSpeakerId || startMutation.isPending}
+          className="flex-1"
         >
           {startMutation.isPending ? "Starting..." : "Start Conversation"}
         </Button>
 
         <Button
-          className="w-full"
           onClick={() => nextTurnMutation.mutate()}
           disabled={nextTurnMutation.isPending || isRunningMultipleTurns}
           variant="secondary"
+          className="flex-1"
         >
           {nextTurnMutation.isPending ? "Generating..." : "Next Turn"}
         </Button>
 
         <Button
-          className="w-full"
           onClick={() => runMultipleTurns(10)}
           disabled={nextTurnMutation.isPending || isRunningMultipleTurns}
           variant="outline"
+          className="flex-1"
         >
-          {isRunningMultipleTurns ? "Running 10 Turns..." : "Run 10 Turns"}
+          {isRunningMultipleTurns ? "Running 10..." : "Run 10 Turns"}
         </Button>
       </div>
     </div>
