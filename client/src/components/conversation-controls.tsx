@@ -57,10 +57,10 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
         description: "Conversation started successfully",
       });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
-        title: "Error Starting Conversation",
-        description: error.message || "Failed to start conversation",
+        title: "Error",
+        description: "Failed to start conversation",
         variant: "destructive",
       });
     },
@@ -76,23 +76,16 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations/current"] });
     },
-    onError: (error: any) => {
-      let description = "Failed to generate next response";
-
-      // Extract specific error message from the API response
-      if (error.message?.includes("Invalid turn order")) {
-        description = "Waiting for the other participant to respond first";
-      } else if (error.message?.includes("Conversation is not active")) {
-        description = "This conversation has ended";
-      }
-
+    onError: () => {
       toast({
-        title: "Turn Error",
-        description,
+        title: "Error",
+        description: "Failed to generate next response",
         variant: "destructive",
       });
     },
   });
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const runMultipleTurns = async (numberOfTurns: number) => {
     setIsRunningMultipleTurns(true);
@@ -104,26 +97,31 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
         if (!conversation || conversation.status !== "active") {
           if (conversation?.status === "completed") {
             toast({
-              title: "Conversation Complete",
-              description: "All turns have been completed",
+              title: "Info",
+              description: "Conversation completed successfully",
             });
           }
           break;
         }
 
+        // Add a small delay between turns to prevent rate limiting
+        if (i > 0) {
+          await delay(1000);
+        }
+
         try {
           await nextTurnMutation.mutateAsync();
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error during turn:", error);
           toast({
-            title: "Turn Error",
-            description: error.message || `Failed at turn ${conversation.currentTurn + 1}`,
+            title: "Error",
+            description: `Failed at turn ${conversation.currentTurn + 1}`,
             variant: "destructive",
           });
           break;
         }
 
-        // Check if the conversation is still active
+        // Verify the conversation is still active after the turn
         const updatedData = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
         if (updatedData?.conversation?.status !== "active") {
           break;
