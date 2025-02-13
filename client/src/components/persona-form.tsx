@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertPersonaSchema, type InsertPersona, type Persona } from "@shared/schema";
+import { insertPersonaSchema, type InsertPersona, type Persona, AI_MODELS } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -30,6 +30,15 @@ import {
 } from "@/components/ui/accordion";
 import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+
+// Group models by provider
+const modelsByProvider = Object.entries(AI_MODELS).reduce((acc, [id, model]) => {
+  if (!acc[model.provider]) {
+    acc[model.provider] = [];
+  }
+  acc[model.provider].push({ id, ...model });
+  return acc;
+}, {} as Record<string, Array<{ id: string; provider: string; name: string; description: string }>>);
 
 export function PersonaForm() {
   const { toast } = useToast();
@@ -149,7 +158,9 @@ export function PersonaForm() {
                     </div>
                     <div>
                       <span className="font-medium">Model:</span>
-                      <p className="text-muted-foreground">{persona.modelType}</p>
+                      <p className="text-muted-foreground">
+                        {AI_MODELS[persona.modelType as keyof typeof AI_MODELS]?.name}
+                      </p>
                     </div>
                     <Button
                       variant="outline"
@@ -235,7 +246,27 @@ export function PersonaForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                      {Object.entries(modelsByProvider).map(([provider, models]) => (
+                        <div key={provider} className="px-2 py-1.5">
+                          <div className="text-sm font-semibold mb-1 text-muted-foreground">
+                            {provider.toUpperCase()} Models
+                          </div>
+                          {models.map((model) => (
+                            <SelectItem
+                              key={model.id}
+                              value={model.id}
+                              className="pl-3"
+                            >
+                              <div className="flex flex-col">
+                                <span>{model.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {model.description}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

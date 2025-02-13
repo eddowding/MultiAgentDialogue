@@ -33,11 +33,25 @@ export const conversations = pgTable("conversations", {
   ),
 });
 
+// Define available AI models with their providers
+export const AI_MODELS = {
+  'gpt-4o': { provider: 'openai', name: 'GPT-4o (Latest)', description: 'Most advanced OpenAI model' },
+  'gpt-4-turbo': { provider: 'openai', name: 'GPT-4 Turbo', description: 'Fast and powerful' },
+  'gpt-4': { provider: 'openai', name: 'GPT-4', description: 'Stable and reliable' },
+  'gpt-3.5-turbo': { provider: 'openai', name: 'GPT-3.5 Turbo', description: 'Fast and cost-effective' },
+  'grok-2-1212': { provider: 'xai', name: 'Grok 2', description: 'Latest Grok model' },
+  'grok-2-vision-1212': { provider: 'xai', name: 'Grok 2 Vision', description: 'Vision-capable Grok model' },
+  'grok-beta': { provider: 'xai', name: 'Grok Beta', description: 'Stable Grok model' },
+  'grok-vision-beta': { provider: 'xai', name: 'Grok Vision Beta', description: 'Stable vision-capable Grok model' },
+} as const;
+
 export const insertPersonaSchema = createInsertSchema(personas).pick({
   name: true,
   background: true,
   goal: true,
   modelType: true,
+}).extend({
+  modelType: z.enum(Object.keys(AI_MODELS) as [keyof typeof AI_MODELS, ...Array<keyof typeof AI_MODELS>])
 });
 
 export const insertMessageSchema = createInsertSchema(messages).pick({

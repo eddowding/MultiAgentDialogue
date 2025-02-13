@@ -1,9 +1,11 @@
 import OpenAI from "openai";
-import { Persona, Message } from "@shared/schema";
+import { Persona, Message, AI_MODELS } from "@shared/schema";
+
+// Create OpenAI client for each provider
+const openaiClient = new OpenAI();
+const xaiClient = new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.XAI_API_KEY });
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI();
-
 export async function generateResponse(
   currentPersona: Persona,
   conversationHistory: Message[],
@@ -28,7 +30,12 @@ Keep responses concise (2-3 sentences).
     .join("\n");
 
   try {
-    const response = await openai.chat.completions.create({
+    // Select the appropriate client based on the model provider
+    const client = AI_MODELS[currentPersona.modelType as keyof typeof AI_MODELS].provider === 'xai' 
+      ? xaiClient 
+      : openaiClient;
+
+    const response = await client.chat.completions.create({
       model: currentPersona.modelType,
       messages: [
         { role: "system", content: personalizedPrompt },
@@ -40,7 +47,7 @@ Keep responses concise (2-3 sentences).
 
     return response.choices[0].message.content || "No response generated";
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error("AI API error:", error);
     throw new Error("Failed to generate AI response");
   }
 }
