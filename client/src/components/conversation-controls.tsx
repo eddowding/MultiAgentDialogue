@@ -30,6 +30,7 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
   const queryClient = useQueryClient();
   const [firstSpeakerId, setFirstSpeakerId] = useState<string>("");
   const [maxTurns, setMaxTurns] = useState("10");
+  const [isRunningMultipleTurns, setIsRunningMultipleTurns] = useState(false);
 
   const startMutation = useMutation({
     mutationFn: async () => {
@@ -72,6 +73,27 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
       });
     },
   });
+
+  const runMultipleTurns = async (numberOfTurns: number) => {
+    setIsRunningMultipleTurns(true);
+    try {
+      for (let i = 0; i < numberOfTurns; i++) {
+        const conversation = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
+        if (!conversation?.conversation || conversation.conversation.status !== "active") {
+          break;
+        }
+        await nextTurnMutation.mutateAsync();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete all turns",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningMultipleTurns(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -116,10 +138,19 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
         <Button
           className="w-full"
           onClick={() => nextTurnMutation.mutate()}
-          disabled={nextTurnMutation.isPending}
+          disabled={nextTurnMutation.isPending || isRunningMultipleTurns}
           variant="secondary"
         >
           {nextTurnMutation.isPending ? "Generating..." : "Next Turn"}
+        </Button>
+
+        <Button
+          className="w-full"
+          onClick={() => runMultipleTurns(10)}
+          disabled={nextTurnMutation.isPending || isRunningMultipleTurns}
+          variant="outline"
+        >
+          {isRunningMultipleTurns ? "Running 10 Turns..." : "Run 10 Turns"}
         </Button>
       </div>
     </div>

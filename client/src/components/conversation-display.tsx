@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Message, type Persona } from "@shared/schema";
+import { useEffect, useRef } from "react";
 
 interface ConversationResponse {
   conversation: {
@@ -17,11 +18,18 @@ interface ConversationResponse {
 }
 
 export function ConversationDisplay() {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = useQuery<ConversationResponse>({
     queryKey: ["/api/conversations/current"],
     enabled: true, // Always enable to show latest conversation
     refetchInterval: 2000, // Poll every 2 seconds for updates
   });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [data?.messages]);
 
   if (isLoading) {
     return (
@@ -83,6 +91,7 @@ export function ConversationDisplay() {
                 </div>
               );
             })}
+            <div ref={scrollRef} />
           </div>
         </ScrollArea>
       </CardContent>
