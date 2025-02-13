@@ -20,6 +20,19 @@ export function registerRoutes(app: Express): Server {
     res.json(persona);
   });
 
+  app.patch("/api/personas/:id", async (req, res) => {
+    const result = insertPersonaSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: "Invalid persona data" });
+    }
+    const id = parseInt(req.params.id);
+    const persona = await storage.updatePersona(id, result.data);
+    if (!persona) {
+      return res.status(404).json({ error: "Persona not found" });
+    }
+    res.json(persona);
+  });
+
   // Conversation routes
   app.get("/api/conversations/current", async (req, res) => {
     // Get all conversations and find the most recent active one

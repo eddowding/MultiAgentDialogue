@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertPersonaSchema, type InsertPersona } from "@shared/schema";
+import { insertPersonaSchema, type InsertPersona, type Persona } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -28,10 +28,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { UserCircle } from "lucide-react";
+import { UserCircle, Pencil } from "lucide-react";
+import { useState } from "react";
 
 export function PersonaForm() {
   const { toast } = useToast();
+  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const { data: personas } = useQuery({
     queryKey: ["/api/personas"],
   });
@@ -48,24 +50,44 @@ export function PersonaForm() {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertPersona) => {
-      await apiRequest("POST", "/api/personas", data);
+      if (editingPersona) {
+        await apiRequest("PATCH", `/api/personas/${editingPersona.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/personas", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/personas"] });
       form.reset();
+      setEditingPersona(null);
       toast({
         title: "Success",
-        description: "Persona created successfully",
+        description: editingPersona ? "Persona updated successfully" : "Persona created successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create persona",
+        description: editingPersona ? "Failed to update persona" : "Failed to create persona",
         variant: "destructive",
       });
     },
   });
+
+  const handleEdit = (persona: Persona) => {
+    setEditingPersona(persona);
+    form.reset({
+      name: persona.name,
+      background: persona.background,
+      goal: persona.goal,
+      modelType: persona.modelType,
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingPersona(null);
+    form.reset();
+  };
 
   return (
     <div className="space-y-6">
@@ -95,6 +117,15 @@ export function PersonaForm() {
                       <span className="font-medium">Model:</span>
                       <p className="text-muted-foreground">{persona.modelType}</p>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(persona)}
+                      className="mt-2"
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit Persona
+                    </Button>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -104,7 +135,9 @@ export function PersonaForm() {
       )}
 
       <div className="space-y-2">
-        <h3 className="font-semibold">Create New Persona</h3>
+        <h3 className="font-semibold">
+          {editingPersona ? `Edit Persona: ${editingPersona.name}` : "Create New Persona"}
+        </h3>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
             <FormField
@@ -176,9 +209,23 @@ export function PersonaForm() {
               )}
             />
 
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Creating..." : "Create Persona"}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={mutation.isPending} className="flex-1">
+                {mutation.isPending
+                  ? (editingPersona ? "Updating..." : "Creating...")
+                  : (editingPersona ? "Update Persona" : "Create Persona")}
+              </Button>
+              {editingPersona && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="flex-1"
+                >
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
           </form>
         </Form>
       </div>

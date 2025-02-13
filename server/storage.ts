@@ -8,6 +8,7 @@ export interface IStorage {
   getPersona(id: number): Promise<Persona | undefined>;
   listPersonas(): Promise<Persona[]>;
   createPersona(persona: InsertPersona): Promise<Persona>;
+  updatePersona(id: number, persona: InsertPersona): Promise<Persona | undefined>;
   deletePersona(id: number): Promise<void>;
 
   // Message operations
@@ -35,6 +36,15 @@ export class DatabaseStorage implements IStorage {
   async createPersona(persona: InsertPersona): Promise<Persona> {
     const [newPersona] = await db.insert(personas).values(persona).returning();
     return newPersona;
+  }
+
+  async updatePersona(id: number, persona: InsertPersona): Promise<Persona | undefined> {
+    const [updatedPersona] = await db
+      .update(personas)
+      .set(persona)
+      .where(eq(personas.id, id))
+      .returning();
+    return updatedPersona;
   }
 
   async deletePersona(id: number): Promise<void> {
