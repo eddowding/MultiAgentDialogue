@@ -74,22 +74,48 @@ export function ConversationControls({ personas }: ConversationControlsProps) {
     },
   });
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const runMultipleTurns = async (numberOfTurns: number) => {
     setIsRunningMultipleTurns(true);
     try {
       for (let i = 0; i < numberOfTurns; i++) {
-        const conversation = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
-        if (!conversation?.conversation || conversation.conversation.status !== "active") {
+        const currentData = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
+        const conversation = currentData?.conversation;
+
+        if (!conversation || conversation.status !== "active") {
+          if (conversation?.status === "completed") {
+            toast({
+              title: "Info",
+              description: "Conversation completed successfully",
+            });
+          }
           break;
         }
-        await nextTurnMutation.mutateAsync();
+
+        // Add a small delay between turns to prevent rate limiting
+        if (i > 0) {
+          await delay(1000);
+        }
+
+        try {
+          await nextTurnMutation.mutateAsync();
+        } catch (error) {
+          console.error("Error during turn:", error);
+          toast({
+            title: "Error",
+            description: `Failed at turn ${conversation.currentTurn + 1}`,
+            variant: "destructive",
+          });
+          break;
+        }
+
+        // Verify the conversation is still active after the turn
+        const updatedData = await queryClient.getQueryData<{ conversation: CurrentConversation }>(["/api/conversations/current"]);
+        if (updatedData?.conversation?.status !== "active") {
+          break;
+        }
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to complete all turns",
-        variant: "destructive",
-      });
     } finally {
       setIsRunningMultipleTurns(false);
     }
